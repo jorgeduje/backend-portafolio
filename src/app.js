@@ -1,13 +1,14 @@
-import express  from "express";
-import config from "./config"
-import productsRoutes from "./routes/products.routes"
+import express from "express";
+import config from "./config";
+import productsRoutes from "./routes/products.routes";
 
-const app = express()
+const app = express();
 
-app.set("port", config.port)
+app.set("port", config.port);
 // middlewares
-app.use(express.json())
-app.use(express.urlencoded({extended: false}))
-app.use(productsRoutes)
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use("/api/v1/products", productsRoutes);
 
-export default app
+
+export default app;

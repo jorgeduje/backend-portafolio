@@ -1,84 +1,99 @@
-import { getConnection, sql, queries } from "../database";
+import { Products } from "../models/model.products";
+
 export const getProducts = async (req, res) => {
   try {
-    const pool = await getConnection();
-    const result = await pool.request().query(queries.getAllProducts);
-    res.json(result.recordset);
+    const products = await Products.findAll({ where: { status: "active" } });
+    res.status(200).json({
+      status: "success",
+      data: {
+        products: products,
+      },
+    });
   } catch (error) {
-    res.status(500);
-    res.send(error.message);
+    console.log(error);
   }
 };
 
 export const createProduct = async (req, res) => {
-  const { name, description } = req.body;
-  const { quantity } = req.body;
+  const { name, description, quantity } = req.body;
 
-  if (name == null || description == null || quantity == null) {
-    return res
-      .status(400)
-      .json({ msg: "bad request, por favor llena los campos" });
-  }
+  // if (name == null || description == null || quantity == null) {
+  //   return res
+  //     .status(400)
+  //     .json({ msg: "bad request, por favor llena los campos" });
+  // }
 
-  try {
-    const pool = await getConnection();
-    await pool
-      .request()
-      .input("name", sql.VarChar, name)
-      .input("description", sql.Text, description)
-      .input("quantity", sql.Int, quantity)
-      .query(queries.createNewProduct);
-    res.json({ name, description, quantity });
-  } catch (error) {
-    res.status(500);
-    res.send(error.message);
-  }
+  const newProduct = await Products.create({
+    name,
+    description,
+    quantity,
+  });
+
+  res.status(201).json({ status: "succes", data: newProduct });
 };
 
 export const getProductById = async (req, res) => {
   const { id } = req.params;
 
-  const pool = await getConnection();
-  const result = await pool
-    .request()
-    .input("id", id)
-    .query(queries.getProductById);
-  res.send(result.recordset[0]);
+  const product = await Products.findOne({
+    where: { id: id, status: "active" },
+  });
+  if (!product) {
+    res.status(404).json({ status: "error", msg: "id not found" });
+  }
+  res.status(201).json({ status: "succes", data: { product } });
 };
+
 export const deleteProductById = async (req, res) => {
   const { id } = req.params;
 
-  const pool = await getConnection();
-  const result = await pool
-    .request()
-    .input("id", id)
-    .query(queries.deleteProduct);
-  res.sendStatus(204);
+  const currentProduct = await Products.findOne({
+    where: { id: id, status: "active" },
+  });
+
+  if (!currentProduct) {
+    res.status(404).json({status: "error", msg: "id not found"})
+    return
+  }
+
+  await currentProduct.update({status: "deleted"})
+  res.status(204).json({status: "success"})
+
+
 };
+
 export const getTotalProducts = async (req, res) => {
-  const pool = await getConnection();
-  const result = await pool.request().query(queries.getTotalProducts);
-  res.json(result.recordset[0][""]);
+  try {
+    const products = await Products.findAll({ where: { status: "active" } });
+    res.status(200).json({
+      status: "success",
+      data: {
+        totalCount: products.length,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 export const updateProductById = async (req, res) => {
-  const { name, description, quantity } = req.body;
+  
   const { id } = req.params;
 
-  if (name == null || description == null || quantity == null) {
-    return res
-      .status(400)
-      .json({ msg: "bad request, por favor llena los campos" });
+  const currentProduct = await Products.findOne({
+    where: { id: id, status: "active" },
+  });
+
+  if (!currentProduct) {
+    res.status(404).json({status: "error", msg: "id not found"})
+    return
   }
 
-  const pool = await getConnection();
-  await pool
-    .request()
-    .input("name", sql.VarChar, name)
-    .input("description", sql.Text, description)
-    .input("quantity", sql.Int, quantity)
-    .input("id", sql.Int, id)
-    .query(queries.updateProductById);
+  await currentProduct.update({
+    ...currentProduct,
+    ...req.body
+  })
+  res.status(204).json({status: "success"})
 
-  res.json({ name, description, quantity });
 };
+
